@@ -11,8 +11,76 @@ const int GRID_SIZES[GRID_TYPES] = {10,12,15};
 
 
 #pragma region ShipsPositioning
-void manualShipPositioning(int** playerBoard, int gridSize) {
 
+const char* validationShipPositioning(int** playerBoard, int gridSize, int firstCoordinate, int secondCoordinate, char direction, int shipSize) {
+	const char* message = nullptr;
+	if (playerBoard == nullptr) {
+		message = "Something wnet wrong!";
+	}
+	if (firstCoordinate > gridSize || secondCoordinate > gridSize) {
+		message = "The coordinate it's out of bounds.";
+	}
+	else if (playerBoard[firstCoordinate - 1][secondCoordinate - 1] == 1) {
+		message = "You already have a ship on this place";
+	}
+	else if (direction != 'H' && direction != 'h' && direction != 'V' && direction != 'v') {
+		message = "Invalid direction!";
+	}
+
+	else {
+		
+		if (direction == 'V' || direction == 'v') {
+			if (firstCoordinate + shipSize > gridSize - 1) {
+				message = "Error: Ship exceeds board boundaries! Choose a different start or direction.";
+			}
+			else {
+				for (int i = firstCoordinate; i < shipSize + firstCoordinate; i++) {
+					playerBoard[firstCoordinate - 1][secondCoordinate - 1] = 1;
+				}
+			}
+		}
+
+		else if (direction == 'H' || direction == 'h') {
+			if (secondCoordinate + shipSize > gridSize - 1) {
+				message = "Error: Ship exceeds board boundaries! Choose a different start or direction.";
+			}
+			else {
+				for (int i = secondCoordinate; i < shipSize + secondCoordinate; i++) {
+					playerBoard[firstCoordinate - 1][secondCoordinate - 1] = 1;
+				}
+			}
+		}
+	}
+
+	return message;
+}
+
+void manualShipPositioning(int** playerBoard, int gridSize) {
+	for (int i = 0; i < SHIPS_TYPES; i++) {
+		for (int j = 0; j < SHIP_COUNTS[i]; j++) {
+			cout << "How do you want to position your " << j + 1 << "th ship with length " << SHIP_LENGTHS[i] << endl;
+			cout << "Please enter coordinates for the start of your ship (ex: 3 4)"<<endl;
+			cout << "Your choice: ";
+			int firstCoordinate = 0;
+			int secondCoordinate = 0;
+			char direction;
+			while (true) {
+				cin >> firstCoordinate;
+				cin >> secondCoordinate;
+				cout << "Please enter the direction of your ship: H for horizontal or V for vertical" << endl;
+				cin >> direction;		
+				const char* result = validationShipPositioning(playerBoard, gridSize, firstCoordinate, secondCoordinate, direction, SHIP_LENGTHS[i]);
+				if (result == nullptr) {
+					cout << "You have successfully placed your ship!";
+					break;
+				}
+				else {
+					cout << result;
+					cout << "Please enter again the coordinates and the direction" << endl;
+				}
+			}
+		}
+	}
 }
 
 void automaticShipPositioning(int** playerBoard, int gridSize) {
@@ -85,7 +153,7 @@ int main()
 		int** playerBoard = allocateBoard(gridSize);
 		int** computerBoard = allocateBoard(gridSize);
 
-		cout << "How would you like to position your 10 ships?";
+		cout << "How would you like to position your 10 ships?"<<endl;
 		cout << "[1] Automatic (Randomly generated)" << endl;
 		cout << "[2] Manual    (Enter coordinates manually)" << endl;
 		
@@ -102,9 +170,9 @@ int main()
 			cout << "Your choice: ";
 		}
 
-		(choiceShipsPositioning == 1) ? manualShipPositioning(playerBoard, gridSize) : automaticShipPositioning(playerBoard, gridSize);
+		(choiceShipsPositioning == 1) ? automaticShipPositioning(playerBoard, gridSize) : manualShipPositioning(playerBoard, gridSize);
 
-
+		int i = 0;
 		deallocateBoard(playerBoard, gridSize);
 		deallocateBoard(computerBoard, gridSize);
 	}
