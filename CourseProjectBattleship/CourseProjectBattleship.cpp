@@ -11,13 +11,13 @@ const int SHIPS_COUNT = 10;
 const int SHIP_LENGTHS[SHIPS_TYPES] = { 4,3,2,1 };
 const int SHIP_COUNTS[SHIPS_TYPES] = { 1,2,3,4 };
 const int GRID_TYPES = 3;
-const int GRID_SIZES[GRID_TYPES] = { 10,12,15 };
+const int GRID_SIZES[GRID_TYPES] = { 6,12,15 };
 enum boardElements {
 	water,
-	ship,
 	hit,
 	miss,
-	sunk
+	sunk,
+	ship
 };
 
 #pragma region ShipsPositioning
@@ -41,7 +41,7 @@ bool coordinateValidation(int firstCoordinate, int secondCoordinate, int gridSiz
 bool isThePositionFree(char direction, int gridSize, int firstCoordinate, int secondCoordinate, int shipLength, int** board) {
 	if (direction == 'V' || direction == 'v') {
 		for (int i = firstCoordinate; i < shipLength + firstCoordinate; i++) {
-			if (board[i][secondCoordinate] == 1) {
+			if (board[i][secondCoordinate] >= ship) {
 				return false;
 			}
 		}
@@ -49,7 +49,7 @@ bool isThePositionFree(char direction, int gridSize, int firstCoordinate, int se
 
 	else if (direction == 'H' || direction == 'h') {
 		for (int i = secondCoordinate; i < shipLength + secondCoordinate; i++) {
-			if (board[firstCoordinate][i] == 1) {
+			if (board[firstCoordinate][i] >= ship) {
 				return false;
 			}
 		}
@@ -57,12 +57,11 @@ bool isThePositionFree(char direction, int gridSize, int firstCoordinate, int se
 	return true;
 }
 
-void shipModification(char direction, int gridSize, int firstCoordinate, int secondCoordinate, int shipLength, int** playerBoard, int command) {
-	int q = 0;
+void shipModification(char direction, int gridSize, int firstCoordinate, int secondCoordinate, int shipLength, int** playerBoard, int command, int shipId) {
 	if (direction == 'V' || direction == 'v') {
 		for (int i = firstCoordinate; i < shipLength + firstCoordinate; i++) {
 			if (command == ship) {
-				playerBoard[i][secondCoordinate] = ship;
+				playerBoard[i][secondCoordinate] = ship + shipId;
 			}
 			else if (command == sunk) {
 				playerBoard[i][secondCoordinate] = sunk;
@@ -73,37 +72,13 @@ void shipModification(char direction, int gridSize, int firstCoordinate, int sec
 	else if (direction == 'H' || direction == 'h') {
 		for (int i = secondCoordinate; i < shipLength + secondCoordinate; i++) {
 			if (command == ship) {
-				playerBoard[firstCoordinate][i] = ship;
+				playerBoard[firstCoordinate][i] = ship + shipId;
 			}
 			else if (command == sunk) {
 				playerBoard[firstCoordinate][i] = sunk;
 			}
 		}
 	}
-
-}
-
-int shipEndPositionFirstCoordinate(char direction, int gridSize, int firstCoordinate, int secondCoordinate, int shipLength, int** playerBoard) {
-	if (direction == 'V' || direction == 'v') {
-		return firstCoordinate + shipLength - 1;
-	}
-
-	else if (direction == 'H' || direction == 'h') {
-		return firstCoordinate;
-	}
-	return -1;
-
-}
-
-int shipEndPositionSecondCoordinate(char direction, int gridSize, int firstCoordinate, int secondCoordinate, int shipLength, int** playerBoard) {
-	if (direction == 'V' || direction == 'v') {
-		return secondCoordinate;
-	}
-
-	else if (direction == 'H' || direction == 'h') {
-		return shipLength + secondCoordinate - 1;
-	}
-	return -1;
 
 }
 
@@ -135,9 +110,8 @@ void directionInput(char& direction) {
 	}
 }
 
-void manualShipPositioning(int** playerBoard, int gridSize, int *playerShipStartPositions, int* playerShipEndPositions) {
-	int counter = 0;
-
+void manualShipPositioning(int** playerBoard, int gridSize) {
+	int count = 0;
 	for (int i = 0; i < SHIPS_TYPES; i++) {
 		for (int j = 0; j < SHIP_COUNTS[i]; j++) {
 			cout << "How do you want to position your " << j + 1 << "th ship with length " << SHIP_LENGTHS[i] << endl;
@@ -154,11 +128,7 @@ void manualShipPositioning(int** playerBoard, int gridSize, int *playerShipStart
 
 				if (coordinateValidation(firstCoordinate, secondCoordinate, gridSize, SHIP_LENGTHS[i], direction)) {
 					if (isThePositionFree(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard)) {
-						shipModification(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard, ship);
-						playerShipStartPositions[counter] = firstCoordinate;
-						playerShipEndPositions[counter] = secondCoordinate;
-						playerShipStartPositions[counter+1] = shipEndPositionFirstCoordinate(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard);
-						playerShipEndPositions[counter+1] = shipEndPositionSecondCoordinate(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard);
+						shipModification(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard, ship, count);
 						cout << "You have successfully placed your ship!" << endl;
 						// cout player's board with current ships
 						break;
@@ -174,13 +144,13 @@ void manualShipPositioning(int** playerBoard, int gridSize, int *playerShipStart
 				}
 
 			}
-			counter++;
+			count++;
 		}
 	}
 }
 
-void automaticShipPositioning(int** playerBoard, int gridSize, int* shipStartPositions, int* shipEndPositions) {
-	int counter = 0;
+void automaticShipPositioning(int** playerBoard, int gridSize) {
+	int count = 0;
 	for (int i = 0; i < SHIPS_TYPES; i++) {
 		for (int j = 0; j < SHIP_COUNTS[i]; j++) {
 		
@@ -195,18 +165,13 @@ void automaticShipPositioning(int** playerBoard, int gridSize, int* shipStartPos
 
 				if (coordinateValidation(firstCoordinate, secondCoordinate, gridSize, SHIP_LENGTHS[i], direction)) {
 					if (isThePositionFree(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard)) {
-						shipStartPositions[counter] = firstCoordinate;
-						shipStartPositions[counter+1] = secondCoordinate;
-						shipEndPositions[counter] = shipEndPositionFirstCoordinate(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard);
-						shipEndPositions[counter+1] = shipEndPositionSecondCoordinate(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard);
-
-						shipModification(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard, ship);
+						shipModification(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard, ship, count);
 						break;
 					}
 				}
 
 			}
-			counter= counter+2;
+			count++;
 		}
 	}
 }
@@ -299,33 +264,22 @@ void setColor(Color color) {
 }
 
 void printSymbolInBoard(int element) {
-	
-	switch (element) {
-		case water: {
-			setColor(Color::Aqua);
-			cout << "\xE3\x80\xB0";
-			break;
-		}
-		case ship: {
-			cout << "\xF0\x9F\x9A\xA2";
-			break;
-		}
-		case hit: {
-			cout << "\xF0\x9F\x94\xA5";
-			break;
-		}
-		case sunk: {
-			cout << "\xF0\x9F\x8E\xAF";
-			break;
-		}
-		case miss: {
-			setColor(Color::Aqua);
-			cout << "\xE2\x97\x8B";
-			break;
-		}
-		default: {
-			return;
-		}
+	if (element == water) {
+		setColor(Color::Aqua);
+		cout << "\xE3\x80\xB0";
+	}
+	else if (element == sunk) {
+		cout << "\xF0\x9F\x8E\xAF";
+	}
+	else if (element == miss) {
+		setColor(Color::Aqua);
+		cout << " \xE2\x97\xAF";
+	}
+	else if (element > 0 && element <= ship + SHIPS_COUNT) {
+		cout << "\xF0\x9F\x9A\xA2";
+	}
+	else if (element < 0 && element >= -ship - SHIPS_COUNT) {
+		cout << "\xF0\x9F\x94\xA5";
 	}
 	setColor(Color::White);
 
@@ -375,52 +329,41 @@ void printBoard(int** computerBoard, int** playerBoard, int size) {
 bool isGameFinished(int** board, int size) {
 	for (int i = 0; i < size; i++) {
 		for (int j = 0; j < size; j++) {
-			if (board[i][j] == ship) return false;
+			if (board[i][j] != sunk && board[i][j] != water) return false;
 		}
 	}
 	return true;
 }
 
-bool isSunk(int firstCoordinate, int secondCoordinate, int size, int** board, int* shipStartPositions, int* shipEndPositions) {
-	for (int i = 0; i < 20; i += 2) {
-		int startRow = shipStartPositions[i];
-		int startCol = shipStartPositions[i + 1];
-		int endRow = shipEndPositions[i];
-		int endCol = shipEndPositions[i + 1];
+bool isSunk(int firstCoordinate, int secondCoordinate, int size, int** board) {
+	int currentID = board[firstCoordinate][secondCoordinate];
+	board[firstCoordinate][secondCoordinate] = -currentID;
 
-		if (firstCoordinate >= startRow && firstCoordinate <= endRow && secondCoordinate >= startCol && secondCoordinate <= endCol) {
-
-			bool allHit = true;
-			for (int r = startRow; r <= endRow; r++) {
-				for (int c = startCol; c <= endCol; c++) {
-					if (board[r][c] == ship) {
-						allHit = false;
-						break;
-					}
-				}
-				if (!allHit) break;
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			if (board[i][j] == currentID) {
+				return false;
 			}
-
-			if (allHit) {
-				char direction = (startCol == endCol) ? 'V' : 'H';
-				int length = (direction == 'V') ? (endRow - startRow + 1) : (endCol - startCol + 1);
-				shipModification(direction, size, startRow, startCol, length, board, sunk);
-				return true;
-			}
-			return false;
 		}
 	}
-	return false;
-}
 
-bool playerMove(int size, int** computerBoard, int* shipStartPositions, int* shipEndPositions) {
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			if (board[i][j] == -currentID) {
+				board[i][j] = sunk;
+			}
+		}
+	}
+	return true;
+}
+bool playerMove(int size, int** computerBoard) {
 	cout << "Enter coordinates (ex: 3 4)" << endl;
 	cout << "Your choice: ";
 	int firstCoordinate = 0, secondCoordinate = 0;
 	coordinatesInput(firstCoordinate, secondCoordinate, size);
-	if (computerBoard[firstCoordinate][secondCoordinate] == ship) {
-		computerBoard[firstCoordinate][secondCoordinate] = hit;
-		if(isSunk(firstCoordinate, secondCoordinate, size, computerBoard, shipStartPositions, shipEndPositions)) {
+	if (computerBoard[firstCoordinate][secondCoordinate] >= ship &&
+		computerBoard[firstCoordinate][secondCoordinate] <= ship + SHIPS_COUNT) {
+		if(isSunk(firstCoordinate, secondCoordinate, size, computerBoard)) {
 			cout << "You have successfully sunk the ship!" << endl;
 		}
 		else {
@@ -440,18 +383,65 @@ bool playerMove(int size, int** computerBoard, int* shipStartPositions, int* shi
 	return false;
 }
 
-void GameLogic(int** playerBoard, int** computerBoard, int size, int* playerShipStartPositions,
-	int* playerShipEndPositions, int* computerShipStartPositions, int* computerShipEndPositions) {
+int* generateMoves(int gridSize) {
+	int total = gridSize * gridSize;
+	int* moveSequence = new int[total];
+
+	for (int i = 0; i < total; i++) {
+		moveSequence[i] = i;
+	}
+
+	for (int i = total - 1; i > 0; i--) {
+		int j = rand() % (i + 1);
+		int temp = moveSequence[i];
+		moveSequence[i] = moveSequence[j];
+		moveSequence[j] = temp;
+	}
+	return moveSequence;
+}
+bool computerMove(int size, int** playerBoard, int& currentMoveIndex) {
+	int* totalMoves = generateMoves(size);
+	int totalIndex = totalMoves[currentMoveIndex];
+	currentMoveIndex++;
+
+	int r = totalIndex / size;
+	int c = totalIndex % size;
+
+	cout << "Computer shoots at: " << r + 1 << " " << c + 1 << endl;
+
+	if (playerBoard[r][c] >= ship) {
+		if (isSunk(r, c, size, playerBoard)) {
+			cout << "Computer sunk your ship!" << endl;
+			return true;
+		}
+		else {
+			cout << "Computer hit your ship!" << endl;
+			return true;
+		}
+	}
+	else if (playerBoard[r][c] == water) {
+		playerBoard[r][c] = miss;
+		cout << "Computer missed!" << endl;
+	}
+	return false;
+}
+
+void GameLogic(int** playerBoard, int** computerBoard, int size) {
 	int step = 1;
 	while (!(isGameFinished(playerBoard, size) || isGameFinished(computerBoard, size))) {
 		if (step % 2) {
-			if (playerMove(size, computerBoard, computerShipStartPositions, computerShipEndPositions)) {
+			if (playerMove(size, computerBoard)) {
 				step--;
 			}
 			printBoard(computerBoard, playerBoard, size);
 		}
 		else {
-			//computerMove();
+			int currentMove = 0;
+			Sleep(1000);
+			if (computerMove(size, playerBoard, currentMove)) {
+				step--;
+			}
+			printBoard(computerBoard, playerBoard, size);
 		}
 		step++;
 	}
@@ -466,20 +456,16 @@ void initializeNewGame() {
 	int gridSize = GRID_SIZES[difficultyLevel - 1];
 	int** playerBoard = allocateBoard(gridSize);
 	int** computerBoard = allocateBoard(gridSize);
-	int playerShipStartPositions[2 * SHIPS_COUNT] = {};
-	int playerShipEndPositions[2 * SHIPS_COUNT] = {};
-	int computerShipStartPositions[2 * SHIPS_COUNT] = {};
-	int computerShipEndPositions[2 * SHIPS_COUNT] = {};
 
 	int choiceShipsPositioning = 0;
 	setShipPositioning(choiceShipsPositioning);
 
-	(choiceShipsPositioning == 1) ? automaticShipPositioning(playerBoard, gridSize, playerShipStartPositions, playerShipEndPositions) :
-		manualShipPositioning(playerBoard, gridSize, playerShipStartPositions, playerShipEndPositions);
-	automaticShipPositioning(computerBoard, gridSize, computerShipStartPositions, computerShipEndPositions);
+	(choiceShipsPositioning == 1) ? automaticShipPositioning(playerBoard, gridSize) :
+		manualShipPositioning(playerBoard, gridSize);
+	automaticShipPositioning(computerBoard, gridSize);
 	printBoard(computerBoard, playerBoard, gridSize);
 
-	GameLogic(playerBoard, computerBoard, gridSize, playerShipStartPositions, playerShipEndPositions, computerShipStartPositions, computerShipEndPositions);
+	GameLogic(playerBoard, computerBoard, gridSize);
 
 	deallocateBoard(playerBoard, gridSize);
 	deallocateBoard(computerBoard, gridSize);
