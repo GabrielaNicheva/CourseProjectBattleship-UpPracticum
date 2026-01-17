@@ -89,7 +89,7 @@ void coordinatesInput(int& firstCoordinate, int& secondCoordinate, const int gri
 		cin >> secondCoordinate;
 		secondCoordinate--;
 
-		if ((firstCoordinate < 0 || firstCoordinate + 1 > gridSize) && (secondCoordinate < 0 || secondCoordinate + 1 > gridSize)) {
+		if ((firstCoordinate < 0 || firstCoordinate + 1 > gridSize) || (secondCoordinate < 0 || secondCoordinate + 1 > gridSize)) {
 			cout << "Incorrect coordinates! They are out of bounds." << endl;
 			cout << "Please enter the coordinates again" << endl;
 		}
@@ -309,12 +309,12 @@ void printBoard(int** computerBoard, int** playerBoard, int size) {
 			else {
 				cout << " ";
 			}
-			/*if (computerBoard[i][j] == ship) {
+			if (computerBoard[i][j] >= ship) {
 				printSymbolInBoard(water);
 			}
-			else {*/
+			else {
 				printSymbolInBoard(computerBoard[i][j]);
-		//	}
+			}
 		}
 		cout << " | ";
 		for (size_t j = 0; j < size; j++){
@@ -329,7 +329,7 @@ void printBoard(int** computerBoard, int** playerBoard, int size) {
 bool isGameFinished(int** board, int size) {
 	for (int i = 0; i < size; i++) {
 		for (int j = 0; j < size; j++) {
-			if (board[i][j] != sunk && board[i][j] != water) return false;
+			if (board[i][j] >= ship) return false;
 		}
 	}
 	return true;
@@ -356,6 +356,7 @@ bool isSunk(int firstCoordinate, int secondCoordinate, int size, int** board) {
 	}
 	return true;
 }
+
 bool playerMove(int size, int** computerBoard) {
 	cout << "Enter coordinates (ex: 3 4)" << endl;
 	cout << "Your choice: ";
@@ -377,10 +378,39 @@ bool playerMove(int size, int** computerBoard) {
 		return false;
 	}
 	else {
-		cout << "You have already entered the same coordinates! Please enter new ones." << endl;
+		cout << "Invalid coordinates! Please enter new ones." << endl;
 		return true;
 	}
 	return false;
+}
+
+void addNeighbors(int r, int c, int** board, int size, int* neighbors, int& currentElement) {
+	int rowDir[] = { -1, 1, 0, 0 };
+	int colDir[] = { 0, 0, -1, 1 };
+
+	for (int i = 0; i < 4; i++) {
+		int nextR = r + rowDir[i];
+		int nextC = c + colDir[i];
+
+		if (nextR >= 0 && nextR < size && nextC >= 0 && nextC < size) {
+
+			if (board[nextR][nextC] == water || board[nextR][nextC] >= ship) {
+
+				bool alreadyInStack = false;
+				for (int k = 0; k < currentElement; k++) {
+					if (neighbors[k] == nextR * size + nextC) {
+						alreadyInStack = true;
+						break;
+					}
+				}
+
+				if (!alreadyInStack) {
+					neighbors[currentElement] = nextR * size + nextC;
+					currentElement++;
+				}
+			}
+		}
+	}
 }
 
 int* generateMoves(int gridSize) {
@@ -399,35 +429,67 @@ int* generateMoves(int gridSize) {
 	}
 	return moveSequence;
 }
-bool computerMove(int size, int** playerBoard, int& currentMoveIndex) {
-	int* totalMoves = generateMoves(size);
-	int totalIndex = totalMoves[currentMoveIndex];
-	currentMoveIndex++;
 
-	int r = totalIndex / size;
-	int c = totalIndex % size;
+bool computerMove(int size, int** playerBoard, int& currentMoveIndex, int* totalMoves, int* neighbors, int& currentElement) {
+	int firstCoordinate, secondCoordinate;
+	bool validTargetFound = false;
 
-	cout << "Computer shoots at: " << r + 1 << " " << c + 1 << endl;
+	while (currentElement > 0) {
+		currentElement--;
+		int targetIndex = neighbors[currentElement];
+		firstCoordinate = targetIndex / size;
+		secondCoordinate = targetIndex % size;
 
-	if (playerBoard[r][c] >= ship) {
-		if (isSunk(r, c, size, playerBoard)) {
+		if (playerBoard[firstCoordinate][secondCoordinate] == water || playerBoard[firstCoordinate][secondCoordinate] >= ship) {
+			validTargetFound = true;
+			break;
+		}
+	}
+
+	if (!validTargetFound) {
+		if (currentMoveIndex >= size * size) {
+			cout << "ERROR: Computer has no valid moves left!" << endl;
+			return false;
+		}
+
+		firstCoordinate = totalMoves[currentMoveIndex] / size;
+		secondCoordinate = totalMoves[currentMoveIndex] % size;
+		currentMoveIndex++;
+
+		while ((playerBoard[firstCoordinate][secondCoordinate] == miss ||
+			playerBoard[firstCoordinate][secondCoordinate] == sunk ||
+			playerBoard[firstCoordinate][secondCoordinate] < 0) &&
+			currentMoveIndex < size * size) {
+
+			firstCoordinate = totalMoves[currentMoveIndex] / size;
+			secondCoordinate = totalMoves[currentMoveIndex] % size;
+			currentMoveIndex++;
+		}
+	}
+	cout << "Computer shoots at: " << firstCoordinate + 1 << " " << secondCoordinate + 1 << endl;
+
+	if (playerBoard[firstCoordinate][secondCoordinate] >= ship) {
+		if (isSunk(firstCoordinate, secondCoordinate, size, playerBoard)) {
 			cout << "Computer sunk your ship!" << endl;
 			return true;
 		}
 		else {
 			cout << "Computer hit your ship!" << endl;
+			addNeighbors(firstCoordinate, secondCoordinate, playerBoard, size, neighbors, currentElement);
 			return true;
 		}
 	}
-	else if (playerBoard[r][c] == water) {
-		playerBoard[r][c] = miss;
+	else if (playerBoard[firstCoordinate][secondCoordinate] == water) {
+		playerBoard[firstCoordinate][secondCoordinate] = miss;
 		cout << "Computer missed!" << endl;
+	}
+	else {
+		cout << "Computer targeted an old spot."<<endl;
 	}
 	return false;
 }
 
-void GameLogic(int** playerBoard, int** computerBoard, int size) {
-	int step = 1;
+void GameLogic(int** playerBoard, int** computerBoard, int size, int* totalMoves, int* neighbors, int currentMove = 0, int currentElement = 0, int step = 1) {
 	while (!(isGameFinished(playerBoard, size) || isGameFinished(computerBoard, size))) {
 		if (step % 2) {
 			if (playerMove(size, computerBoard)) {
@@ -436,14 +498,19 @@ void GameLogic(int** playerBoard, int** computerBoard, int size) {
 			printBoard(computerBoard, playerBoard, size);
 		}
 		else {
-			int currentMove = 0;
 			Sleep(1000);
-			if (computerMove(size, playerBoard, currentMove)) {
+			if (computerMove(size, playerBoard, currentMove, totalMoves, neighbors, currentElement)) {
 				step--;
 			}
 			printBoard(computerBoard, playerBoard, size);
 		}
 		step++;
+	}
+	if (isGameFinished(playerBoard, size)) {
+		cout << "Computer won.";
+	}
+	else {
+		cout << "Congrat! You won!";
 	}
 }
 
@@ -465,10 +532,16 @@ void initializeNewGame() {
 	automaticShipPositioning(computerBoard, gridSize);
 	printBoard(computerBoard, playerBoard, gridSize);
 
-	GameLogic(playerBoard, computerBoard, gridSize);
+
+	int* totalMoves = generateMoves(gridSize);
+	int* neighbors = new int[gridSize * gridSize];
+	GameLogic(playerBoard, computerBoard, gridSize, totalMoves, neighbors);
 
 	deallocateBoard(playerBoard, gridSize);
 	deallocateBoard(computerBoard, gridSize);
+
+	delete[] totalMoves;
+	delete[] neighbors;
 }
 
 int main()
@@ -479,6 +552,10 @@ int main()
 	selectGameMode(gameChoice);
 
 	if (gameChoice == 1) {
+
 		initializeNewGame();
+	}
+	else {
+		//GameLogic();
 	}
 }
