@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <ctime>
 #include<windows.h>
+#include <fstream>
+
 using std::cout;
 using std::cin;
 using std::endl;
@@ -12,6 +14,9 @@ const int SHIP_LENGTHS[SHIPS_TYPES] = { 4,3,2,1 };
 const int SHIP_COUNTS[SHIPS_TYPES] = { 1,2,3,4 };
 const int GRID_TYPES = 3;
 const int GRID_SIZES[GRID_TYPES] = { 6,12,15 };
+const char* SAVE_FILE = "battleship_game.txt";
+
+
 enum boardElements {
 	water,
 	hit,
@@ -82,10 +87,27 @@ void shipModification(char direction, int gridSize, int firstCoordinate, int sec
 
 }
 
-void coordinatesInput(int& firstCoordinate, int& secondCoordinate, const int gridSize) {
+bool coordinatesInputAndCheckFoSaving(int& firstCoordinate, int& secondCoordinate, const int gridSize) {
 	while (true) {
-		cin >> firstCoordinate;
-		firstCoordinate--;
+		char symbol[3] = "\0";
+		cin >> symbol;
+		if (symbol[0] == 's' || symbol[0] == 'S') {
+			return true;
+			break;
+		}
+		if (symbol[1] == '\0') {
+			if (symbol[0] >= '0' && symbol[0] <= '9') {
+				firstCoordinate = symbol[0] - '0' - 1;
+			}
+		}
+		else {
+			if (symbol[1] >= '0' && symbol[1] <= '9') {
+				firstCoordinate = (symbol[0] -1) * 10 + symbol[1] - 1;
+			}
+			else {
+				cout << "Invalid input data";
+			}
+		}
 		cin >> secondCoordinate;
 		secondCoordinate--;
 
@@ -95,6 +117,7 @@ void coordinatesInput(int& firstCoordinate, int& secondCoordinate, const int gri
 		}
 		else break;
 	}
+	return false;
 }
 
 void directionInput(char& direction) {
@@ -102,7 +125,7 @@ void directionInput(char& direction) {
 	while (true)
 	{
 		cin >> direction;
-		if (direction != 'H' && direction != 'h' && direction != 'V' && direction != 'v') {
+		if (direction == 'H' || direction == 'h' || direction == 'V' || direction == 'v') {
 			break;
 		}
 		cout << "Invalid direction!" << endl;
@@ -121,7 +144,7 @@ void manualShipPositioning(int** playerBoard, int gridSize) {
 			int secondCoordinate = 0;
 			char direction;
 			while (true) {
-				coordinatesInput(firstCoordinate, secondCoordinate, gridSize);
+				coordinatesInputAndCheckFoSaving(firstCoordinate, secondCoordinate, gridSize);
 				if (SHIP_LENGTHS[i] != 1) {
 					directionInput(direction);
 				}							
@@ -326,6 +349,55 @@ void printBoard(int** computerBoard, int** playerBoard, int size) {
 }
 
 
+#pragma region SaveLoadGame
+
+void loadBoard(std::ifstream& in, int** board, int size) {
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			in >> board[i][j];
+		}
+	}
+}
+void saveBoard(std::ofstream& out, int** board, int size) {
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			out << board[i][j] << " ";
+		}
+		out << endl;
+	}
+}
+
+
+void saveGame(int** playerBoard, int** computerBoard, int size, int step, int currentMoveIndex, int* totalMoves, int* neighbors, int currentElement) {
+	std::ofstream out(SAVE_FILE);
+
+	out << size << endl;
+	out << step << endl;
+	out << currentMoveIndex << endl;
+	out << currentElement << endl;
+
+	saveBoard(out, playerBoard, size);
+	saveBoard(out, computerBoard, size);
+
+	for (int i = 0; i < size * size; i++) {
+		out << totalMoves[i] << " ";
+	}
+	out << endl;
+
+	for (int i = 0; i < currentElement; i++) {
+		out << neighbors[i] << " ";
+	}
+
+	out.close();
+}
+
+
+
+#pragma endregion
+
+
+#pragma region MainLogic
+
 bool isGameFinished(int** board, int size) {
 	for (int i = 0; i < size; i++) {
 		for (int j = 0; j < size; j++) {
@@ -357,25 +429,27 @@ bool isSunk(int firstCoordinate, int secondCoordinate, int size, int** board) {
 	return true;
 }
 
-bool playerMove(int size, int** computerBoard) {
-	cout << "Enter coordinates (ex: 3 4)" << endl;
+int playerMove(int size, int** computerBoard) {
+	cout << "Enter coordinates (ex: 3 4) or S for saving the game" << endl;
 	cout << "Your choice: ";
 	int firstCoordinate = 0, secondCoordinate = 0;
-	coordinatesInput(firstCoordinate, secondCoordinate, size);
+	if (coordinatesInputAndCheckFoSaving(firstCoordinate, secondCoordinate, size)) {
+		return -1;
+	}
 	if (computerBoard[firstCoordinate][secondCoordinate] >= ship &&
 		computerBoard[firstCoordinate][secondCoordinate] <= ship + SHIPS_COUNT) {
-		if(isSunk(firstCoordinate, secondCoordinate, size, computerBoard)) {
+		if (isSunk(firstCoordinate, secondCoordinate, size, computerBoard)) {
 			cout << "You have successfully sunk the ship!" << endl;
 		}
 		else {
 			cout << "Congrats! You hit!" << endl;
 		}
-		return true;
+		return 1;
 	}
 	else if (computerBoard[firstCoordinate][secondCoordinate] == water) {
 		computerBoard[firstCoordinate][secondCoordinate] = miss;
 		cout << "Unfortunately you miss :((" << endl;
-		return false;
+		return 0;
 	}
 	else {
 		cout << "Invalid coordinates! Please enter new ones." << endl;
@@ -484,7 +558,7 @@ bool computerMove(int size, int** playerBoard, int& currentMoveIndex, int* total
 		cout << "Computer missed!" << endl;
 	}
 	else {
-		cout << "Computer targeted an old spot."<<endl;
+		cout << "Computer targeted an old spot." << endl;
 	}
 	return false;
 }
@@ -492,28 +566,69 @@ bool computerMove(int size, int** playerBoard, int& currentMoveIndex, int* total
 void GameLogic(int** playerBoard, int** computerBoard, int size, int* totalMoves, int* neighbors, int currentMove = 0, int currentElement = 0, int step = 1) {
 	while (!(isGameFinished(playerBoard, size) || isGameFinished(computerBoard, size))) {
 		if (step % 2) {
-			if (playerMove(size, computerBoard)) {
+			int result = playerMove(size, computerBoard);
+
+			if (result == 1) {
 				step--;
 			}
+			else if (result == -1) {
+				saveGame(playerBoard, computerBoard, size, step, currentMove, totalMoves, neighbors, currentElement);
+				cout << "Game saved!" << endl;
+				return;
+			}
+			system("cls");
+
 			printBoard(computerBoard, playerBoard, size);
 		}
 		else {
-			Sleep(1000);
+
 			if (computerMove(size, playerBoard, currentMove, totalMoves, neighbors, currentElement)) {
 				step--;
 			}
+			system("cls");
+			Sleep(2000);
 			printBoard(computerBoard, playerBoard, size);
 		}
 		step++;
+		Sleep(2000);
+
 	}
 	if (isGameFinished(playerBoard, size)) {
 		cout << "Computer won.";
 	}
 	else {
-		cout << "Congrat! You won!";
+		cout << "Congrats! You won!";
 	}
 }
 
+#pragma endregion
+
+void loadGame() {
+	std::ifstream in(SAVE_FILE);
+
+	int size, step, currentMoveIndex, currentElement;
+	in >> size >> step >> currentMoveIndex >> currentElement;
+
+	int** playerBoard = allocateBoard(size);
+	int** computerBoard = allocateBoard(size);
+
+	loadBoard(in, playerBoard, size);
+	loadBoard(in, computerBoard, size);
+
+	int* totalMoves = new int[size * size];
+	for (int i = 0; i < size * size; i++) {
+		in >> totalMoves[i];
+	}
+
+	int* neighbors = new int[size * size];
+	for (int i = 0; i < currentElement; i++) {
+		in >> neighbors[i];
+	}
+
+	in.close();
+
+	GameLogic(playerBoard, computerBoard, size, totalMoves, neighbors, currentMoveIndex, currentElement, step);
+}
 
 void initializeNewGame() {
 
@@ -556,6 +671,6 @@ int main()
 		initializeNewGame();
 	}
 	else {
-		//GameLogic();
+		loadGame();
 	}
 }
