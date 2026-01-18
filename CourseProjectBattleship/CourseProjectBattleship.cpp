@@ -25,9 +25,14 @@ enum boardElements {
 	ship
 };
 
+bool isDigit(char symbol) {
+	return (symbol >= '0' && symbol <= '9');
+}
+
 #pragma region ShipsPositioning
 
-bool coordinateValidation(int firstCoordinate, int secondCoordinate, int gridSize, int shipLength, char direction) {
+bool coordinateValidationAfterDirection(int firstCoordinate, int secondCoordinate, int gridSize, int shipLength, char direction = '-') {
+
 	if (direction == 'H' || direction == 'h') {
 		if (secondCoordinate + shipLength - 1 >= gridSize) {
 			return false;
@@ -63,6 +68,7 @@ bool isThePositionFree(char direction, int gridSize, int firstCoordinate, int se
 }
 
 void shipModification(char direction, int gridSize, int firstCoordinate, int secondCoordinate, int shipLength, int** playerBoard, int command, int shipId) {
+	
 	if (direction == 'V' || direction == 'v') {
 		for (int i = firstCoordinate; i < shipLength + firstCoordinate; i++) {
 			if (command == ship) {
@@ -84,41 +90,59 @@ void shipModification(char direction, int gridSize, int firstCoordinate, int sec
 			}
 		}
 	}
-
 }
 
-bool coordinatesInputAndCheckFoSaving(int& firstCoordinate, int& secondCoordinate, const int gridSize) {
-	while (true) {
-		char symbol[3] = "\0";
-		cin >> symbol;
-		if (symbol[0] == 's' || symbol[0] == 'S') {
-			return true;
-			break;
-		}
-		if (symbol[1] == '\0') {
-			if (symbol[0] >= '0' && symbol[0] <= '9') {
-				firstCoordinate = symbol[0] - '0' - 1;
-			}
+int isCoordinateValidNumber() {
+	char buffer[10];
+	cin >> buffer;
+
+	if (buffer[0] == 's' || buffer[0] == 'S') {
+		return -1;
+	}
+
+	int num = 0;
+	for (int i = 0; buffer[i] != '\0'; i++) {
+		if (buffer[i] >= '0' && buffer[i] <= '9') {
+			num = num * 10 + (buffer[i] - '0');
 		}
 		else {
-			if (symbol[1] >= '0' && symbol[1] <= '9') {
-				firstCoordinate = (symbol[0] -1) * 10 + symbol[1] - 1;
-			}
-			else {
-				cout << "Invalid input data";
-			}
+			return 0;
 		}
-		cin >> secondCoordinate;
-		secondCoordinate--;
-
-		if ((firstCoordinate < 0 || firstCoordinate + 1 > gridSize) || (secondCoordinate < 0 || secondCoordinate + 1 > gridSize)) {
-			cout << "Incorrect coordinates! They are out of bounds." << endl;
-			cout << "Please enter the coordinates again" << endl;
-		}
-		else break;
 	}
-	return false;
+	cin.clear();
+	cin.ignore();
+	return num;
+
 }
+
+int coordinatesInputValidation(int& firstCoordinate, int& secondCoordinate,
+	const int gridSize, int** board) {
+
+	firstCoordinate = isCoordinateValidNumber();
+	if (firstCoordinate == -1) return -1;
+	if (firstCoordinate <= 0) return 0;
+
+	secondCoordinate = isCoordinateValidNumber();
+	if (secondCoordinate <= 0) return 0;
+
+	firstCoordinate--;
+	secondCoordinate--;
+
+	if (firstCoordinate < 0 || firstCoordinate >= gridSize ||
+		secondCoordinate < 0 || secondCoordinate >= gridSize) {
+		return 0;
+	}
+
+	if (board[firstCoordinate][secondCoordinate] == miss ||
+		board[firstCoordinate][secondCoordinate] <= hit  && board[firstCoordinate][secondCoordinate] != water ||
+		board[firstCoordinate][secondCoordinate] == sunk) {
+		return 0;
+	}
+
+	return 1;
+}
+
+
 
 void directionInput(char& direction) {
 	cout << "Please enter the direction of your ship: H for horizontal or V for vertical" << endl;
@@ -133,43 +157,164 @@ void directionInput(char& direction) {
 	}
 }
 
+#pragma region PrintBoard
+
+enum class Color
+{
+	Aqua = 3,
+	White = 7
+};
+
+void setColor(Color color) {
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (int)color);
+}
+
+
+
+
+void printSymbolInBoard(int element) {
+	if (element == water) {
+		setColor(Color::Aqua);
+		cout << "\xE3\x80\xB0";
+	}
+	else if (element == sunk) {
+		cout << "\xF0\x9F\x8E\xAF";
+	}
+	else if (element == miss) {
+		setColor(Color::Aqua);
+		cout << " \xE2\x97\xAF";
+	}
+	else if (element > 0 && element <= ship + SHIPS_COUNT) {
+		cout << "\xF0\x9F\x9A\xA2";
+	}
+	else if (element < 0 && element >= -ship - SHIPS_COUNT) {
+		cout << "\xF0\x9F\x94\xA5";
+	}
+	setColor(Color::White);
+
+}
+
+
+
+void printFirstRow(int size) {
+	for (size_t i = 0; i <= size; i++) {
+		if (i == 0) {
+			cout << i << "   ";
+		}
+		else if (i < 10) {
+
+			cout << i << "  ";
+		}
+		else {
+			cout << i << " ";
+		}
+	}
+	cout << endl;
+}
+
+
+void printCurrentShipsPositioning(int size, int** playerBoard) {
+	printFirstRow(size);
+	for (size_t i = 0; i < size; i++) {
+		cout << i + 1 << " ";
+
+		for (size_t j = 0; j < size; j++) {
+			if (j == 0 && i < 9) {
+				cout << "  ";
+			}
+			else {
+				cout << " ";
+			}
+			printSymbolInBoard(playerBoard[i][j]);
+		}
+		cout << endl;
+	}
+}
+
+
+void printBoard(int** computerBoard, int** playerBoard, int size) {
+	printFirstRow(size);
+	for (size_t i = 0; i < size; i++) {
+		cout << i + 1 << " ";
+		for (size_t j = 0; j < size; j++)
+		{
+			if (j == 0 && i < 9) {
+				cout << "  ";
+			}
+			else {
+				cout << " ";
+			}
+			if (computerBoard[i][j] >= ship) {
+				printSymbolInBoard(water);
+			}
+			else {
+				printSymbolInBoard(computerBoard[i][j]);
+			}
+		}
+		cout << " | ";
+		for (size_t j = 0; j < size; j++) {
+			cout << " ";
+			printSymbolInBoard(playerBoard[i][j]);
+		}
+		cout << endl;
+	}
+}
+#pragma endregion
+
+
+
 void manualShipPositioning(int** playerBoard, int gridSize) {
 	int count = 0;
 	for (int i = 0; i < SHIPS_TYPES; i++) {
 		for (int j = 0; j < SHIP_COUNTS[i]; j++) {
+			printCurrentShipsPositioning(gridSize, playerBoard);
 			cout << "How do you want to position your " << j + 1 << "th ship with length " << SHIP_LENGTHS[i] << endl;
 			cout << "Please enter coordinates for the start of your ship (ex: 3 4)" << endl;
 			cout << "Your choice: ";
 			int firstCoordinate = 0;
 			int secondCoordinate = 0;
-			char direction;
+			char direction = '-';
 			while (true) {
-				coordinatesInputAndCheckFoSaving(firstCoordinate, secondCoordinate, gridSize);
-				if (SHIP_LENGTHS[i] != 1) {
-					directionInput(direction);
-				}							
-
-				if (coordinateValidation(firstCoordinate, secondCoordinate, gridSize, SHIP_LENGTHS[i], direction)) {
-					if (isThePositionFree(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard)) {
-						shipModification(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard, ship, count);
-						cout << "You have successfully placed your ship!" << endl;
-						// cout player's board with current ships
-						break;
-					}
+				if (coordinatesInputValidation(firstCoordinate, secondCoordinate, gridSize, playerBoard) == 1) {
+					if (SHIP_LENGTHS[i] != 1) {
+						directionInput(direction);
+						if (coordinateValidationAfterDirection(firstCoordinate, secondCoordinate, gridSize, SHIP_LENGTHS[i], direction)) {
+							if (isThePositionFree(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard)) {
+								shipModification(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard, ship, count);
+								cout << "You have successfully placed your ship!" << endl;
+								break;
+							}
+							else {
+								cout << "There is already a ship on this place!" << endl;
+								cout << "Please enter again the coordinates and the direction" << endl;
+							}
+						}
+						else {
+							cout << "Incorrect input!" << endl;
+							cout << "Please enter the coordinates again" << endl;
+						}
+					}							
 					else {
-						cout << "There is already a ship on this place!" << endl;
-						cout << "Please enter again the coordinates and the direction" << endl;
+						playerBoard[firstCoordinate][secondCoordinate] = ship + count;
+						cout << "You have successfully placed your ship!" << endl;
+						break;
 					}
 				}
 				else {
-					cout << "Your ship it's out of bounds." << endl;
-					cout << "Please enter the coordinates again" << endl;
+					cout << "Invalid input! Please enter the coordinates!" << endl;
+					cout << "Your choice: ";
 				}
-
+				
 			}
+			Sleep(2000);
+			system("cls");
 			count++;
 		}
 	}
+	printCurrentShipsPositioning(gridSize, playerBoard);
+	Sleep(2000);
+	system("cls");
+
 }
 
 void automaticShipPositioning(int** playerBoard, int gridSize) {
@@ -186,7 +331,7 @@ void automaticShipPositioning(int** playerBoard, int gridSize) {
 				int randomDirection = rand() % 2;
 				(randomDirection) ? direction = 'H' : direction = 'V';
 
-				if (coordinateValidation(firstCoordinate, secondCoordinate, gridSize, SHIP_LENGTHS[i], direction)) {
+				if (coordinateValidationAfterDirection(firstCoordinate, secondCoordinate, gridSize, SHIP_LENGTHS[i], direction)) {
 					if (isThePositionFree(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard)) {
 						shipModification(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard, ship, count);
 						break;
@@ -229,15 +374,17 @@ void setBattlefield(int& difficultyLevel) {
 	cout << "[3] Storm of Steel  (15x15 Grid) - Expert" << endl;
 	cout << "Select difficulty (1-3): ";
 	while (true) {
-		cin >> difficultyLevel;
-		if (difficultyLevel == 1 || difficultyLevel == 2 || difficultyLevel == 3) {
-			break;
+		char symbol;
+		cin >> symbol;
+		if (isDigit(symbol)) {
+			difficultyLevel = symbol - '0';
+			if (difficultyLevel == 1 || difficultyLevel == 2 || difficultyLevel == 3) {
+				break;
+			}
 		}
-		else {
-			cout << "Invalid input!" << endl;
-			cout << "Please enter a correct number (1, 2 or 3)" << endl;
-			cout << "Your choice ";
-		}
+		cout << "Invalid input!" << endl;
+		cout << "Please enter a correct number (1, 2 or 3)" << endl;
+		cout << "Your choice ";
 	}
 }
 
@@ -248,9 +395,13 @@ void setShipPositioning(int& choiceShipsPositioning) {
 
 	cout << "Your choice: ";
 	while (true) {
-		cin >> choiceShipsPositioning;
-		if (choiceShipsPositioning == 1 || choiceShipsPositioning == 2) {
-			break;
+		char symbol;
+		cin >> symbol;
+		if (isDigit(symbol)) {
+			choiceShipsPositioning = symbol - '0';
+			if (choiceShipsPositioning == 1 || choiceShipsPositioning == 2) {
+				break;
+			}
 		}
 		cout << "Invalid input data!" << endl;
 		cout << "Please enter 1 (automatic) or 2 (manual)" << endl;
@@ -263,90 +414,20 @@ void selectGameMode(int& choice) {
 	cout << "[1] New Game" << endl;
 	cout << "[2] Load Saved Game" << endl;
 	while (true) {
-		cin >> choice;
-		if (choice == 1 || choice == 2) {
-			break;
+		char symbol;
+		cin >> symbol;
+		if (isDigit(symbol)) {
+			choice = symbol - '0';
+			if (choice == 1 || choice == 2) {
+				break;
+			}
 		}
-		else {
-			cout << "Invalid input!" << endl;
-			cout << "Please enter 1 (for a new game) or 2 (to load saved game)" << endl;
-		}
+		cout << "Invalid input!" << endl;
+		cout << "Please enter 1 (for a new game) or 2 (to load saved game)" << endl;
 	}
 }
 #pragma endregion
 
-
-enum class Color
-{
-	Aqua = 3,
-	White = 7
-};
-
-void setColor(Color color) {
-	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (int)color);
-}
-
-void printSymbolInBoard(int element) {
-	if (element == water) {
-		setColor(Color::Aqua);
-		cout << "\xE3\x80\xB0";
-	}
-	else if (element == sunk) {
-		cout << "\xF0\x9F\x8E\xAF";
-	}
-	else if (element == miss) {
-		setColor(Color::Aqua);
-		cout << " \xE2\x97\xAF";
-	}
-	else if (element > 0 && element <= ship + SHIPS_COUNT) {
-		cout << "\xF0\x9F\x9A\xA2";
-	}
-	else if (element < 0 && element >= -ship - SHIPS_COUNT) {
-		cout << "\xF0\x9F\x94\xA5";
-	}
-	setColor(Color::White);
-
-}
-
-void printBoard(int** computerBoard, int** playerBoard, int size) {
-	for (size_t i = 0; i <= size; i++) {
-		if (i == 0) {
-			cout << i << "   ";
-		}
-		else if (i < 10) {
-
-			cout << i << "  ";
-		}
-		else {
-			cout << i << " ";
-		}
-	}
-	cout << endl;
-	for (size_t i = 0; i < size; i++) {
-		cout << i + 1 << " ";
-		for (size_t j = 0; j < size; j++)
-		{
-			if (j == 0 && i < 9) {
-				cout << "  ";
-			}
-			else {
-				cout << " ";
-			}
-			if (computerBoard[i][j] >= ship) {
-				printSymbolInBoard(water);
-			}
-			else {
-				printSymbolInBoard(computerBoard[i][j]);
-			}
-		}
-		cout << " | ";
-		for (size_t j = 0; j < size; j++){
-			cout << " ";
-			printSymbolInBoard(playerBoard[i][j]);
-		}
-		cout << endl;
-	}
-}
 
 
 #pragma region SaveLoadGame
@@ -433,10 +514,16 @@ int playerMove(int size, int** computerBoard) {
 	cout << "Enter coordinates (ex: 3 4) or S for saving the game" << endl;
 	cout << "Your choice: ";
 	int firstCoordinate = 0, secondCoordinate = 0;
-	if (coordinatesInputAndCheckFoSaving(firstCoordinate, secondCoordinate, size)) {
+
+	int result = coordinatesInputValidation(firstCoordinate, secondCoordinate, size, computerBoard);
+	if ( result == -1) {
 		return -1;
 	}
-	if (computerBoard[firstCoordinate][secondCoordinate] >= ship &&
+	else if (result == 0) {
+		cout << "Invalid coordinates! Please enter new ones." << endl;
+		return 1;
+	}
+	else if (computerBoard[firstCoordinate][secondCoordinate] >= ship &&
 		computerBoard[firstCoordinate][secondCoordinate] <= ship + SHIPS_COUNT) {
 		if (isSunk(firstCoordinate, secondCoordinate, size, computerBoard)) {
 			cout << "You have successfully sunk the ship!" << endl;
@@ -451,11 +538,7 @@ int playerMove(int size, int** computerBoard) {
 		cout << "Unfortunately you miss :((" << endl;
 		return 0;
 	}
-	else {
-		cout << "Invalid coordinates! Please enter new ones." << endl;
-		return true;
-	}
-	return false;
+	return 0;
 }
 
 void addNeighbors(int r, int c, int** board, int size, int* neighbors, int& currentElement) {
@@ -566,8 +649,9 @@ bool computerMove(int size, int** playerBoard, int& currentMoveIndex, int* total
 void GameLogic(int** playerBoard, int** computerBoard, int size, int* totalMoves, int* neighbors, int currentMove = 0, int currentElement = 0, int step = 1) {
 	while (!(isGameFinished(playerBoard, size) || isGameFinished(computerBoard, size))) {
 		if (step % 2) {
-			int result = playerMove(size, computerBoard);
+			printBoard(computerBoard, playerBoard, size);
 
+			int result = playerMove(size, computerBoard);
 			if (result == 1) {
 				step--;
 			}
@@ -576,21 +660,24 @@ void GameLogic(int** playerBoard, int** computerBoard, int size, int* totalMoves
 				cout << "Game saved!" << endl;
 				return;
 			}
+
+			//printBoard(computerBoard, playerBoard, size);
+			Sleep(2000);
 			system("cls");
 
-			printBoard(computerBoard, playerBoard, size);
 		}
 		else {
 
 			if (computerMove(size, playerBoard, currentMove, totalMoves, neighbors, currentElement)) {
 				step--;
 			}
-			system("cls");
-			Sleep(2000);
+			Sleep(1500);
 			printBoard(computerBoard, playerBoard, size);
+			Sleep(4000);
+			system("cls");
 		}
 		step++;
-		Sleep(2000);
+		//Sleep(2000);
 
 	}
 	if (isGameFinished(playerBoard, size)) {
@@ -645,7 +732,7 @@ void initializeNewGame() {
 	(choiceShipsPositioning == 1) ? automaticShipPositioning(playerBoard, gridSize) :
 		manualShipPositioning(playerBoard, gridSize);
 	automaticShipPositioning(computerBoard, gridSize);
-	printBoard(computerBoard, playerBoard, gridSize);
+	//printBoard(computerBoard, playerBoard, gridSize);
 
 
 	int* totalMoves = generateMoves(gridSize);
@@ -673,4 +760,5 @@ int main()
 	else {
 		loadGame();
 	}
+	
 }
