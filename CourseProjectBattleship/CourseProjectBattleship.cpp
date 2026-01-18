@@ -1,7 +1,7 @@
 ﻿#include <iostream>
 #include <cstdlib>
 #include <ctime>
-#include<windows.h>
+#include <windows.h>
 #include <fstream>
 
 using std::cout;
@@ -13,7 +13,7 @@ const int SHIPS_COUNT = 10;
 const int SHIP_LENGTHS[SHIPS_TYPES] = { 4,3,2,1 };
 const int SHIP_COUNTS[SHIPS_TYPES] = { 1,2,3,4 };
 const int GRID_TYPES = 3;
-const int GRID_SIZES[GRID_TYPES] = { 6,12,15 };
+const int GRID_SIZES[GRID_TYPES] = { 10,12,15 };
 const char* SAVE_FILE = "battleship_game.txt";
 
 enum boardElements {
@@ -67,7 +67,6 @@ enum class Color
 {
 	Aqua = 3,
 	White = 7,
-	Green = 10,
 	Red = 12,
 };
 
@@ -91,7 +90,7 @@ void printHeader(const char* title) {
 
 void printVictory() {
 	system("cls");
-	setColor(Color::Green);
+	setColor(Color::Aqua);
 	cout << "********************************************" << endl;
 	cout << "*                                          *" << endl;
 	cout << "*            CONGRATULATIONS!              *" << endl;
@@ -106,14 +105,13 @@ void printGameOver() {
 	setColor(Color::Red);
 	cout << "############################################" << endl;
 	cout << "#                                          #" << endl;
-	cout << "#              GAME OVER                   #" << endl;
+	cout << "#                 GAME OVER                #" << endl;
 	cout << "#         THE COMPUTER DEFEATED YOU        #" << endl;
 	cout << "#                                          #" << endl;
 	cout << "############################################" << endl;
 	setColor(Color::White);
 }
 #pragma endregion
-
 
 #pragma region ShipsPositioning
 
@@ -135,7 +133,9 @@ bool coordinateValidationAfterDirection(int firstCoordinate, int secondCoordinat
 	return true;
 }
 
-bool isThePositionFree(char direction, int gridSize, int firstCoordinate, int secondCoordinate, int shipLength, int** board) {
+bool isThePositionFree(char direction, int gridSize, int firstCoordinate,
+	int secondCoordinate, int shipLength, int** board) {
+
 	if (direction == 'V' || direction == 'v') {
 		for (int i = firstCoordinate; i < shipLength + firstCoordinate; i++) {
 			if (board[i][secondCoordinate] >= ship) {
@@ -199,7 +199,6 @@ int isCoordinateValidNumber() {
 	cin.clear();
 	cin.ignore();
 	return num;
-
 }
 
 int coordinatesInputValidation(int& firstCoordinate, int& secondCoordinate,
@@ -430,8 +429,12 @@ void automaticShipPositioning(int** playerBoard, int gridSize) {
 				int randomDirection = rand() % 2;
 				(randomDirection) ? direction = 'H' : direction = 'V';
 
-				if (coordinateValidationAfterDirection(firstCoordinate, secondCoordinate, gridSize, SHIP_LENGTHS[i], direction)) {
-					if (isThePositionFree(direction, gridSize, firstCoordinate, secondCoordinate, SHIP_LENGTHS[i], playerBoard)) {
+				if (coordinateValidationAfterDirection(firstCoordinate, secondCoordinate,
+					gridSize, SHIP_LENGTHS[i], direction)) {
+
+					if (isThePositionFree(direction, gridSize, firstCoordinate,
+						secondCoordinate, SHIP_LENGTHS[i], playerBoard)) {
+
 						shipModification(direction, gridSize, firstCoordinate,
 							secondCoordinate, SHIP_LENGTHS[i], playerBoard, ship, count);
 						break;
@@ -569,8 +572,6 @@ void saveGame(int** playerBoard, int** computerBoard, int size, int step,
 	out.close();
 }
 
-
-
 #pragma endregion
 
 #pragma region MainLogic
@@ -639,6 +640,7 @@ int playerMove(int size, int** computerBoard) {
 
 	else if (computerBoard[firstCoordinate][secondCoordinate] == miss || computerBoard[firstCoordinate][secondCoordinate] == sunk ||
 		computerBoard[firstCoordinate][secondCoordinate] <= hit && computerBoard[firstCoordinate][secondCoordinate] != water) {
+
 		cout << "Invalid coordinates! You have already entered them! Please enter new ones." << endl;
 		return 1;
 	}
@@ -699,7 +701,8 @@ bool isValidComputerTarget(int row, int col, int** board) {
 	return board[row][col] == water || board[row][col] >= ship;
 }
 
-bool getNextComputerTarget(int size, int** board, int& row, int& col, int& currentMoveIndex, int* totalMoves, int* neighbors, int& currentElement) {
+bool getNextComputerTarget(int size, int** board, int& row, int& col,
+	int& currentMoveIndex, int* totalMoves, int* neighbors, int& currentElement) {
 
 	while (currentElement > 0) {
 		currentElement--;
@@ -801,12 +804,12 @@ void GameLogic(int** playerBoard, int** computerBoard, int size, int* totalMoves
 
 #pragma endregion
 
-void loadGame() {
+bool loadGame() {
 	std::ifstream in(SAVE_FILE);
 
 	if (!in.is_open()) {
 		cout << "No saved game found!" << endl;
-		return;
+		return false;
 	}
 
 	int size, step, currentMoveIndex, currentElement;
@@ -830,12 +833,14 @@ void loadGame() {
 
 	in.close();
 
-	GameLogic(playerBoard, computerBoard, size, totalMoves, neighbors, currentMoveIndex, currentElement, step);
+	GameLogic(playerBoard, computerBoard, size, totalMoves, neighbors,
+		currentMoveIndex, currentElement, step);
 
 	deallocateBoard(playerBoard, size);
 	deallocateBoard(computerBoard, size);
 	delete[] totalMoves;
 	delete[] neighbors;
+	return true;
 }
 
 void initializeNewGame() {
@@ -882,7 +887,8 @@ int main()
 		initializeNewGame();
 	}
 	else {
-		loadGame();
+		if (!loadGame()) {
+			initializeNewGame();
+		}
 	}
-
 }
