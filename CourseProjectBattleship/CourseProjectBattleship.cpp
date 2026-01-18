@@ -1,14 +1,14 @@
 ﻿/*
-* Solution to course project #<05 Battleship>
+* Solution to course project #05 Battleship
 * Introduction to programming course
 * Faculty of Mathematics and Informatics of Sofia University
 * Winter semester 2025/2026
 *
-* @author <Габриела Ничева>
-* @idnumber <0MIo600594>
-* @compiler <VCC>
+* @author Gabriela Nicheva
+* @idnumber 0MIo600594
+* @compiler VCC
 *
-* <логика за играта>
+* <main file>
 *
 */
 
@@ -298,7 +298,12 @@ void printFirstRow(int size) {
 
 
 void printCurrentShipsPositioning(int size, int** const playerBoard) {
-	printFirstRow(size);
+	cout << "Your ships:" << endl;
+	cout << "    ";
+	for (int i = 1; i <= size; i++) {
+		cout << i << (i < 10 ? "  " : " ");
+	}
+	cout << endl;
 	for (size_t i = 0; i < size; i++) {
 		cout << i + 1 << " ";
 
