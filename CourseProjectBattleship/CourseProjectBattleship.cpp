@@ -1,4 +1,19 @@
-﻿#include <iostream>
+﻿/*
+* Solution to course project #<05 Battleship>
+* Introduction to programming course
+* Faculty of Mathematics and Informatics of Sofia University
+* Winter semester 2025/2026
+*
+* @author <Габриела Ничева>
+* @idnumber <0MIo600594>
+* @compiler <VCC>
+*
+* <логика за играта>
+*
+*/
+
+
+#include <iostream>
 #include <cstdlib>
 #include <ctime>
 #include <windows.h>
