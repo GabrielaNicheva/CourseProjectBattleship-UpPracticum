@@ -1,11 +1,12 @@
-﻿/*
+﻿/**
+* 
 * Solution to course project #05 Battleship
 * Introduction to programming course
 * Faculty of Mathematics and Informatics of Sofia University
 * Winter semester 2025/2026
 *
 * @author Gabriela Nicheva
-* @idnumber 0MIo600594
+* @idnumber 0MI0600594
 * @compiler VCC
 *
 * <main file>
